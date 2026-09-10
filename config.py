@@ -15,15 +15,15 @@ class Settings(BaseSettings):
     )
 
     bot_token: str = ""
-    admin_ids: str = "6005734111"
-    admin_password: str = "admin"
-    subgram_key: str = "696d04b73b5590174fefe74d6f39ac4369a0fe0c8685d4ca1c7c9686dad96f3a"
-    tgrass_key: str = "105c638b812e4936894ceddaf4938e2a"
-    botohub_key: str = "b94407be-c793-4135-8a42-6e23268cef0a"
-    session_secret: str = "clickbot-secret-change-me"
+    admin_ids: str = ""
+    admin_password: str = ""
+    subgram_key: str = ""
+    tgrass_key: str = ""
+    botohub_key: str = ""
+    session_secret: str = ""
     web_host: str = "0.0.0.0"
     web_port: int = 8000
-    database_url: str = "postgresql+asyncpg://postgres@127.0.0.1:5432/clickbot"
+    database_url: str = "postgresql+asyncpg://clickbot:change-me@postgres:5432/clickbot"
     proxy: str = ""
     proxy_scheme: str = "socks5"
     webapp_url: str = ""
@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     def async_database_url(self) -> str:
         url = (self.database_url or "").strip()
         if not url:
-            raise RuntimeError("DATABASE_URL не задан. Нужен PostgreSQL, например postgresql+asyncpg://USER:PASS@127.0.0.1:5432/clickbot")
+            raise RuntimeError("DATABASE_URL не задан. Нужен PostgreSQL.")
         scheme, sep, rest = url.partition("://")
         if not sep:
             return url
