@@ -2,27 +2,92 @@
 
 Бот: реклама после `/start`, кликер, рефералка, вывод звёзд и веб-админка.
 
-## Быстрый старт
+## Запуск через Docker Compose
 
-1. Python 3.11+
-2. Скопируй `.env.example` в `.env` и заполни:
+Проект рассчитан на запуск двумя контейнерами:
 
+- `bot` — Telegram-бот + FastAPI админка;
+- `postgres` — PostgreSQL 16.
+
+PostgreSQL не публикуется наружу: бот подключается к нему по внутреннему Docker DNS-имени `postgres`.
+
+### 1. Подготовить `.env`
+
+```bash
+cp .env.docker.example .env
 ```
+
+Заполни как минимум:
+
+```env
 BOT_TOKEN=токен от @BotFather
 ADMIN_IDS=твой telegram id
-ADMIN_PASSWORD=пароль для веб-админки
+ADMIN_PASSWORD=сложный пароль
+SESSION_SECRET=длинная случайная строка
+POSTGRES_PASSWORD=сложный пароль postgres
 ```
 
-3. Установка и запуск:
+Также добавь ключи сервисов, если они используются:
 
+```env
+SUBGRAM_KEY=
+TGRASS_KEY=
+BOTOHUB_KEY=
 ```
-pip install -r requirements.txt
-python run.py
+
+### 2. Запустить
+
+```bash
+docker compose up -d --build
 ```
 
-Админка: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+Проверить контейнеры:
 
-В боте админам доступна команда `/admin`.
+```bash
+docker compose ps
+```
+
+Посмотреть логи бота:
+
+```bash
+docker compose logs -f bot
+```
+
+Посмотреть логи PostgreSQL:
+
+```bash
+docker compose logs -f postgres
+```
+
+### 3. Админка
+
+После запуска админка доступна на:
+
+```text
+http://IP_СЕРВЕРА:8000
+```
+
+В Telegram админам доступна команда `/admin`.
+
+### Остановка
+
+```bash
+docker compose down
+```
+
+Данные PostgreSQL и приложения находятся в Docker volumes и не удаляются обычной командой `down`.
+
+Для полной остановки с удалением данных:
+
+```bash
+docker compose down -v
+```
+
+> `down -v` удалит базу данных. Используй только если данные больше не нужны.
+
+## Локальный запуск без Docker
+
+Для разработки по-прежнему можно использовать Python 3.11+ и PostgreSQL. При Docker-запуске отдельная установка PostgreSQL на хосте не требуется.
 
 ## Что умеет пользователь
 
