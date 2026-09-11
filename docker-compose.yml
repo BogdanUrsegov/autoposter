@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: autoposter-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-clickbot}
+      POSTGRES_USER: ${POSTGRES_USER:-clickbot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-clickbot} -d ${POSTGRES_DB:-clickbot}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - autoposter
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: autoposter-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-clickbot}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-clickbot}
+      WEB_HOST: 0.0.0.0
+      WEB_PORT: 8000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    volumes:
+      - app_data:/app/data
+      - app_logs:/app/logs
+    networks:
+      - autoposter
+
+volumes:
+  postgres_data:
+  app_data:
+  app_logs:
+
+networks:
+  autoposter:
+    driver: bridge
