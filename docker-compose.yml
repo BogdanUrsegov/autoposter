@@ -17,6 +17,44 @@ services:
     networks:
       - autoposter
 
+  db_restore:
+    image: postgres:16-alpine
+    container_name: autoposter-db-restore
+    restart: "no"
+    env_file:
+      - .env
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB:-clickbot}
+      PGUSER: ${POSTGRES_USER:-clickbot}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    volumes:
+      - ./clickbot_dump.dump:/backup/clickbot_dump.dump:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+        if [ ! -f /backup/clickbot_dump.dump ]; then
+          echo 'ERROR: clickbot_dump.dump не найден рядом с docker-compose.yml'
+          exit 1
+        fi
+
+        TABLE_EXISTS=$$(psql -tAc "SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='users')")
+        if [ "$$TABLE_EXISTS" = "t" ]; then
+          echo 'PostgreSQL уже содержит таблицу users — восстановление пропущено.'
+          exit 0
+        fi
+
+        echo 'Пустая PostgreSQL — начинаю восстановление clickbot_dump.dump...'
+        pg_restore --no-owner --no-privileges --clean --if-exists --exit-on-error -d "$$PGDATABASE" /backup/clickbot_dump.dump
+        echo 'Восстановление PostgreSQL завершено.'
+    networks:
+      - autoposter
+
   bot:
     build:
       context: .
@@ -30,8 +68,8 @@ services:
       WEB_HOST: 0.0.0.0
       WEB_PORT: 8000
     depends_on:
-      postgres:
-        condition: service_healthy
+      db_restore:
+        condition: service_completed_successfully
     ports:
       - "8000:8000"
     volumes:
