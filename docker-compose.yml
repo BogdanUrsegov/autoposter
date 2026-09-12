@@ -1,0 +1,68 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: autoposter-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-clickbot}
+      POSTGRES_USER: ${POSTGRES_USER:-clickbot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backup:/backup:ro
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-clickbot} -d ${POSTGRES_DB:-clickbot}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - autoposter
+
+  db_restore:
+    image: postgres:16-alpine
+    container_name: autoposter-db-restore
+    restart: "no"
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB:-clickbot}
+      PGUSER: ${POSTGRES_USER:-clickbot}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    volumes:
+      - ./backup:/backup:ro
+      - ./docker/restore-db.sh:/restore-db.sh:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "/restore-db.sh"]
+    networks:
+      - autoposter
+
+  bot:
+    build: .
+    container_name: autoposter-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-clickbot}:${POSTGRES_PASSWORD:-change-me}@postgres:5432/${POSTGRES_DB:-clickbot}
+    ports:
+      - "8000:8000"
+    volumes:
+      - app_data:/app/data
+      - app_logs:/app/logs
+    depends_on:
+      db_restore:
+        condition: service_completed_successfully
+    networks:
+      - autoposter
+
+volumes:
+  postgres_data:
+  app_data:
+  app_logs:
+
+networks:
+  autoposter:
+    name: autoposter
