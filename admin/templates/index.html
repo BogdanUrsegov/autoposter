@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Clickbot Admin</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div id="login" class="login">
+    <form class="login-card" onsubmit="return doLogin(event)">
+      <h1>⭐ Clickbot</h1>
+      <p>Админ-панель кликера звёзд</p>
+      <input id="password" type="password" placeholder="Пароль" autofocus />
+      <div style="height:12px"></div>
+      <button class="btn" type="submit">Войти</button>
+      <p id="login-err" class="err"></p>
+    </form>
+  </div>
+
+  <div id="denied" class="login hidden">
+    <div class="login-card">
+      <h1>Нет доступа</h1>
+      <p>Веб-админка открывается только администраторам бота.</p>
+    </div>
+  </div>
+
+  <div id="app" class="app hidden">
+    <aside class="side">
+      <div class="brand">⭐ <span>Clickbot</span></div>
+      <nav class="nav">
+        <button data-page="stats" class="active">📊 Статистика</button>
+        <button data-page="ads">📢 Реклама на старте</button>
+        <button data-page="shows">👁 Показы</button>
+        <button data-page="offers">📋 Офферы / задания</button>
+        <button data-page="campaigns">🔗 Реф-ссылки</button>
+        <button data-page="broadcast">📨 Рассылка</button>
+        <button data-page="userbots">🤖 Юзер-боты</button>
+        <button data-page="withdrawals">💸 Выводы</button>
+        <button data-page="users">👥 Пользователи</button>
+        <button data-page="settings">⚙️ Настройки</button>
+      </nav>
+      <div style="padding:16px 12px">
+        <button class="btn ghost" id="logout-btn" onclick="logout()">Выйти</button>
+      </div>
+    </aside>
+    <main class="main">
+      <div id="page"></div>
+    </main>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>
