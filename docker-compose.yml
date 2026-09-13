@@ -1,0 +1,45 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: autoposter-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-autoposter}
+      POSTGRES_USER: ${POSTGRES_USER:-autoposter}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-autoposter}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - autoposter
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: autoposter-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-autoposter}:${POSTGRES_PASSWORD:-autoposter}@postgres:5432/${POSTGRES_DB:-autoposter}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - app_data:/app/data
+      - app_logs:/app/logs
+    networks:
+      - autoposter
+
+volumes:
+  postgres_data:
+  app_data:
+  app_logs:
+
+networks:
+  autoposter:
