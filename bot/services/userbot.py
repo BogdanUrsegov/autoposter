@@ -581,19 +581,6 @@ async def _bump_greet(account_id: int) -> None:
         await session.commit()
 
 
-def _ensure_send_worker(account_id: int) -> asyncio.PriorityQueue:
-    q = _send_queues.get(account_id)
-    if q is None:
-        q = asyncio.PriorityQueue()
-        _send_queues[account_id] = q
-    task = _send_workers.get(account_id)
-    if task is None or task.done():
-        _send_workers[account_id] = asyncio.create_task(
-            _send_worker(account_id), name=f"ub-send-{account_id}"
-        )
-    return q
-
-
 async def _send_worker(account_id: int) -> None:
     q = _send_queues.get(account_id)
     if q is None:
@@ -779,8 +766,30 @@ async def _deliver_payload(
             return False
 
 
+async def _resolve_telethon_peer(client, peer_id: int):
+    """Resolve a numeric Telegram user id to an InputPeer.
+
+    A bare user id is not always enough for Telethon: after a restart the
+    session may not have the user's access_hash in its entity cache. Try the
+    cache first, then refresh dialogs and try once more.
+    """
+    try:
+        return await client.get_input_entity(peer_id)
+    except (ValueError, TypeError):
+        pass
+
+    try:
+        await client.get_dialogs()
+    except Exception:
+        pass
+
+    return await client.get_input_entity(peer_id)
+
+
 async def _telethon_send(client, peer_id: int, plain: str, entities, media_paths: list[str]) -> bool:
     """Скрины и текст подарка уходят одним сообщением (альбом + подпись)."""
+    peer = await _resolve_telethon_peer(client, peer_id)
+
     kwargs: dict[str, Any] = {}
     if entities:
         kwargs["formatting_entities"] = entities
@@ -788,7 +797,7 @@ async def _telethon_send(client, peer_id: int, plain: str, entities, media_paths
         # один send_file: фото/альбом + caption = текст подарка вместе
         files = media_paths if len(media_paths) > 1 else media_paths[0]
         await client.send_file(
-            peer_id,
+            peer,
             files,
             caption=(plain or None),
             force_document=False,
@@ -797,7 +806,7 @@ async def _telethon_send(client, peer_id: int, plain: str, entities, media_paths
     else:
         if not (plain or "").strip():
             return False
-        await client.send_message(peer_id, plain, **kwargs)
+        await client.send_message(peer, plain, **kwargs)
     return True
 
 
