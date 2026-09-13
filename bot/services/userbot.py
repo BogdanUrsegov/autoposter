@@ -461,6 +461,7 @@ async def _finalize_login(account_id: int) -> dict:
         "username": (me.username or "") if me else "",
     }
 
+
 def _ensure_watcher() -> None:
     global _watcher_task
     if _watcher_task and not _watcher_task.done():
@@ -743,6 +744,14 @@ async def _deliver_payload(
             return ok
         except Exception as e:
             from telethon.errors import FloodWaitError, PeerFloodError, UserIsBlockedError
+
+            if isinstance(e, ValueError) and "Could not find the input entity" in str(e):
+                logger.warning(
+                    "userbot #%s: entity not found for peer %s, skip",
+                    account_id,
+                    peer_id,
+                )
+                return False
 
             if isinstance(e, FloodWaitError):
                 wait = int(getattr(e, "seconds", 3)) + 1
